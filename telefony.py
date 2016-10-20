@@ -12,7 +12,7 @@ import numpy
 from openpyxl import Workbook
 from openpyxl.chart import LineChart, PieChart, Reference
 
-from config import ADRESS_BOOK, NR_TEL  # Create a config file
+from config import CONTACTS_FILE, NR_TEL  # Create a config file
 
 
 class record():
@@ -470,7 +470,7 @@ def main(NR_TEL):
     path = str(NR_TEL)
     current = os.getcwd()
     print('Folder roboczy: %s' % (os.path.join(current, path)))
-    ksiazkaAdresowa = adressBook(ADRESS_BOOK)
+    ksiazkaAdresowa = adressBook(CONTACTS_FILE)
     print('Zaimportowano %d adresow.' % (len(ksiazkaAdresowa)))
     os.chdir(os.path.join(os.getcwd(), path))
     records, telNr, clientId, opis = importRecords()
@@ -484,4 +484,5 @@ def main(NR_TEL):
 
 
 if __name__ == '__main__':
+    # Gets reports data from folder named by telephone number ex \602000111\
     records, polaczenia, operatorzy, rozmowcy = main(NR_TEL)
