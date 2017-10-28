@@ -45,8 +45,8 @@ def adressBook(file):
     f = open(file, 'r', encoding='UTF-16')
     t = f.readlines()
     f.close()
-    book = [a.split(',') for a in t]
-    for contact in book:
+    book = [a.strip().split(',') for a in t]
+    for contact in book[1:]:
         try:
             if contact[34] != '':
                 for number in contact[34].split(':::'):
@@ -56,12 +56,15 @@ def adressBook(file):
                     ksiazkaAdresowa[int(nr)] = contact[0]
         except(KeyError):
             print('Błąd importu dla: %s' % (contact[0]))
+        except(IndexError):
+            print('Błąd importu dla: %s' % (contact[0]))
     return ksiazkaAdresowa
 
 
-def importRecords():
-    '''Imports all the txt files from T-Mobile detailed history.
-    returns: (records, telNr, clientId, opis)
+def scrap_records_TMOBILE():
+    ''' Translates records into statistical data.
+    records: list with raw txt csv data
+    returns: ({'telefoniczne': [], 'SMS': [], 'dane': []}, {}, {})
     '''
     records = []
     files = os.listdir('.')
@@ -74,14 +77,6 @@ def importRecords():
             records += [x.strip().split('\t') for x in lines[11:]]
     opis = lines[10].strip().split('\t')
     records.sort()
-    return (records, telNr, clientId, opis)
-
-
-def compileRecords(records):
-    ''' Translates records into statistical data.
-    records: list with raw txt csv data
-    returns: ({'telefoniczne': [], 'SMS': [], 'dane': []}, {}, {})
-    '''
     data, typ_pol, kierunek, numer, czas = 0, 2, 3, 4, 5
     date = records[0][0][4:6]
     month = 0
@@ -115,7 +110,8 @@ def compileRecords(records):
         elif wpis[typ_pol] == 'telefoniczne' and wpis[numer] == 'internet':
             pass
 #            polaczenia[wpis[typ_pol]][month] += int(wpis[czas].strip('kB '))
-        if wpis[typ_pol] == 'dane' and wpis[kierunek] == 'internet':
+        if wpis[typ_pol] == 'dane' and wpis[kierunek] in ('internet',
+                                                          'Connect internet'):
             polaczenia[wpis[typ_pol]][month] += int(wpis[czas].strip('kB '))
     tel = numpy.array(polaczenia['telefoniczne'])
     print()
@@ -129,7 +125,7 @@ def compileRecords(records):
     print('Średnia pakietów :\t%s' % numpy.mean(polaczenia['dane']))
     print('Średnia smsów:\t%s' % numpy.mean(polaczenia['SMS']).round(2))
     print('Średnia minut:\t%s' % (numpy.mean(tel) / 60).round(2))
-    return (polaczenia, operatorzy, rozmowcy)
+    return (polaczenia, operatorzy, rozmowcy, records, telNr, clientId, opis)
 
 
 def createCharts(sheet, recordsLen, rozmowcyLen, operatorzyLen):
@@ -307,7 +303,8 @@ def writeFile(records, telNr, clientId, polaczenia,
         if dd.month != month:
             month = dd.month
             dates.append(dd)
-        if record[4] != '' and record[4][0] not in ['i', 'K', 'e', 'G', '1']:
+        if record[4] != '' and record[4][0] not in ['i', 'K', 'e',
+                                                    'G', '1', 'C']:
             name = ksiazkaAdresowa.get(int(record[4]))
             if not name:
                 name = int(record[4])
@@ -473,12 +470,12 @@ def main(NR_TEL):
     ksiazkaAdresowa = adressBook(CONTACTS_FILE)
     print('Zaimportowano %d adresow.' % (len(ksiazkaAdresowa)))
     os.chdir(os.path.join(os.getcwd(), path))
-    records, telNr, clientId, opis = importRecords()
-    polaczenia, operatorzy, rozmowcy = compileRecords(records)
+    scrap = scrap_records_TMOBILE()
+    polaczenia, operatorzy, rozmowcy = scrap[:3]
+    records, telNr, clientId, opis = scrap[3:]
     os.chdir(current)
     writeFile(records, telNr, clientId, polaczenia, operatorzy, opis, rozmowcy,
               ksiazkaAdresowa)
-    print('orks!')
     plots(records, polaczenia)
     return records, polaczenia, operatorzy, rozmowcy
 

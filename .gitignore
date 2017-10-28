@@ -1,5 +1,8 @@
 602*
 raporty
 stare
+web
 *.csv
+*.pyc
+*.xls
 config.py
